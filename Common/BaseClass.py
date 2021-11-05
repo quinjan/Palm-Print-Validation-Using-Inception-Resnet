@@ -8,10 +8,16 @@ from Common.Helpers.CLAHE import CLAHE
 from Common.Helpers.ROI import ROI
 from Common.Helpers.Morph import Morph
 from Common.Helpers.Sobel import Sobel
+import enum
 
 class BaseClass:
     def __init__(self):
         print("Base Class Initiated")
+        
+    class Methods(enum.Enum):
+        Method1 = 1
+        Method2 = 2
+        Method3 = 3
 
     def Extract_ROI(self, image):
         print("Extract ROI")
@@ -21,11 +27,11 @@ class BaseClass:
 
     def Preprocessing(self, method, image):
         print("Pre Processing Method")
-        if (method == "Method 1"):
+        if (method == self.Methods.Method1._name_):
             result = self.Method1(image)
-        elif (method == "Method 2"):
+        elif (method == self.Methods.Method2._name_):
             result = self.Method2(image)
-        elif (method == "Method 3"):
+        elif (method == self.Methods.Method3._name_):
             result = self.Method3(image)
         else:
             raise ValueError("Invalid Method")
