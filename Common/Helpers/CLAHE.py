@@ -12,7 +12,7 @@ import time
 
 class CLAHE():
     def __init__(self):
-        print("ClAHE Class Initialized")
+        print("CLAHE Class Initialized")
     
     def Process(self, image):
         n = 2 # number of rows (windows on columns)
