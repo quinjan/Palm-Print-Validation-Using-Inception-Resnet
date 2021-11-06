@@ -5,31 +5,34 @@ Created on Fri Nov  5 09:12:29 2021
 @author: quinj
 """
 
-from keras.layers import Dense, Flatten
-from keras.models import Model
-from keras.applications.inception_resnet_v2 import InceptionResNetV2
-from keras.applications.inception_resnet_v2 import preprocess_input
-from keras.preprocessing.image import ImageDataGenerator
-from keras.optimizers import Adam
+from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.models import Model
+from tensorflow.keras.applications.inception_resnet_v2 import InceptionResNetV2
+from tensorflow.keras.applications.inception_resnet_v2 import preprocess_input
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.optimizers import Adam
 from livelossplot.inputs.keras import PlotLossesCallback
-from keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 import numpy as np
 from glob import glob
 from pathlib import Path
 from PIL import Image
-from keras.models import load_model
+from tensorflow.keras.models import load_model
+import os
+
 
 class MachineLearningModel:
     def __init__(self, method):
         print("Machine Learning Model Initialized")
         self.method = method
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     
     def Train(self):
         BATCH_SIZE = 32
         IMAGE_SIZE = [299, 299]
         
-        train_path = "../Datasets/{}/Split/train".format(self.method)
-        valid_path = "../Datasets/{}/Split/val".format(self.method)
+        train_path = "Datasets/{}/Splits/train".format(self.method)
+        valid_path = "Datasets/{}/Splits/val".format(self.method)
         
         num_classes = glob(train_path + "/*")
         
@@ -52,6 +55,7 @@ class MachineLearningModel:
         # create a model object
         model = Model(inputs=conv_base.input, outputs=prediction)
         
+        
         # tell the model what cost and optimization method to use
         model.compile(
           loss='categorical_crossentropy',
@@ -73,9 +77,9 @@ class MachineLearningModel:
         
         # EarlyStopping
         early_stop = EarlyStopping(monitor='val_loss',
-                                   patience=10,
-                                   restore_best_weights=True,
-                                   mode='min')
+                                    patience=10,
+                                    restore_best_weights=True,
+                                    mode='min')
         
         history = model.fit(training_set,
                             batch_size=BATCH_SIZE,
