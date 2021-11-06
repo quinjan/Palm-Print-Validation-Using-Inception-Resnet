@@ -21,8 +21,7 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
         self.setupUi(self)
            
         self.statusBar().showMessage('Ready')
-        self.returnPushButton.clicked.connect(self.clicked)
-        self.returnPushButton.clicked.connect(self.destroy_webcam)
+        self.returnPushButton.clicked.connect(self.ReturnClicked)
         self.capturePushButton.clicked.connect(self.capture_image)
         
         self.imageLabel.setScaledContents(True)
@@ -35,12 +34,13 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
     def start_webcam(self):
         print("Initializing Camera")
         if self.capture is None:
-            self.capture =cv2.VideoCapture(0)
+            self.capture =cv2.VideoCapture(0 + cv2.CAP_DSHOW)
             self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.timer.start()
-        self.dsGen = DatasetGenerator("Method2",self.usernameLabel.text())
+        self.dsGen = DatasetGenerator(self.selectedMethod , self.userName)
         self.dsGen.InitializeDatasetFolder()
+        self.usernameLabel.setText(self.userName + " " + str(self._image_counter))
     
     def destroy_webcam(self):
         print("Destroying Camera")
@@ -62,8 +62,11 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
             QtWidgets.QApplication.beep()
             name = "{}.png".format(self._image_counter)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            self.statusBar().showMessage('Processing Image')
             self.dsGen.StoreImage(frame, name)
             self._image_counter += 1
+            self.usernameLabel.setText(self.userName + " " + str(self._image_counter))
+            self.statusBar().showMessage('Ready')
     
     def displayImage(self, img, window=True):
         qformat = QtGui.QImage.Format_Indexed8
@@ -80,8 +83,10 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
         except:
             print("Camera Closed")
         
-        
-        
+    def ReturnClicked(self):
+        self._image_counter = 0
+        self.destroy_webcam()
+        self.clicked.emit()
         
         
         
