@@ -13,12 +13,16 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.optimizers import Adam
 from livelossplot.inputs.keras import PlotLossesCallback
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+from Common.DatasetGenerator import DatasetGenerator
 import numpy as np
 from glob import glob
 from pathlib import Path
 from PIL import Image
 from tensorflow.keras.models import load_model
 import os
+import cv2
+import sys
+np.set_printoptions(threshold=sys.maxsize)
 
 
 class MachineLearningModel:
@@ -28,7 +32,11 @@ class MachineLearningModel:
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     
     def Train(self):
-        BATCH_SIZE = 32
+        
+        ds = DatasetGenerator(self.method, "")
+        ds.SplitData()
+        
+        BATCH_SIZE = 1
         IMAGE_SIZE = [299, 299]
         
         train_path = "Datasets/{}/Splits/train".format(self.method)
@@ -90,16 +98,41 @@ class MachineLearningModel:
                             callbacks=[tl_checkpoint_1, early_stop, plot_loss_1],
                             verbose=1)
         
-    def ValidateImage(self, image):
+    def ValidateImage(self, image, username):
+        self.LoadClasses()
         model = self.LoadModel()
+        image = np.uint8(image)
+        image = cv2.cvtColor(image,cv2.COLOR_GRAY2RGB)
+        print(image.shape)
+        image = cv2.resize(image, (299, 299))
         im = Image.fromarray(image, 'RGB')
+        print(im)
         #Resizing into 128x128 because we trained the model with this image size.
         img_array = np.array(im)
         #Our keras model used a 4D tensor, (images x height x width x channel)
         #So changing dimension 128x128x3 into 1x128x128x3 
         img_array = np.expand_dims(img_array, axis=0)
-        pred = model.predict(img_array)
-        return pred
+        x = preprocess_input(img_array)
+        pred = model.predict(x)
+        predicted_label_index = np.argmax(pred)
+        print(pred)
+        predicted_class = self.classList[predicted_label_index]
+        print(predicted_class)
+        if(username == predicted_class):
+            return True
+        else:
+            return False
     
     def LoadModel(self):
         return load_model("Model/{}/tl_model_v1.weights.best.hdf5".format(self.method))
+    
+    def LoadClasses(self):
+        BATCH_SIZE = 32
+        train_path = "Datasets/{}/Splits/train".format(self.method)
+        train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
+        training_set = train_datagen.flow_from_directory(train_path, target_size = (299, 299), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
+        classDictionary = training_set.class_indices
+        self.classList = list(classDictionary)
+        
+        
+        

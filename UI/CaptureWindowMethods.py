@@ -43,9 +43,9 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
         self.usernameLabel.setText(self.userName + " " + str(self._image_counter))
     
     def destroy_webcam(self):
+        self.timer.stop()
         print("Destroying Camera")
         if self.capture != None:
-            self.timer.stop()
             self.capture.release()
             self.capture = None
     
