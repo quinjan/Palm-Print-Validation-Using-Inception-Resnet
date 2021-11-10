@@ -12,6 +12,33 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from UI.CaptureWindow import Ui_CaptureWindow
 from Common.DatasetGenerator import DatasetGenerator
 
+class FrameGrabber(QtCore.QThread):
+    def __init__(self, parent=None):
+        super(FrameGrabber, self).__init__(parent)
+
+    signal = QtCore.pyqtSignal(np.ndarray)
+    
+    cameraLoaded = QtCore.pyqtSignal(bool)
+
+    def run(self):
+        self.cap = cv2.VideoCapture(0)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 500)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 500)
+        self.cameraLoaded.emit(True)
+        while self.cap.isOpened():
+            success, frame = self.cap.read()
+            if success:
+                self.signal.emit(frame)
+    
+    def stop(self):
+        self.cap.release()
+        self.terminate()
+                
+# class Processor(QtCore.QThread):
+#     def __init__(self, parent=None):
+#         super(Processor, self).__init__(parent)
+        
+
 class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
     
     clicked = QtCore.pyqtSignal()
@@ -19,55 +46,46 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
     def __init__(self, parent=None):
         super(CaptureWindow, self).__init__(parent)
         self.setupUi(self)
-           
+
+        self.grabber = QtCore.QThread()
+        
         self.statusBar().showMessage('Ready')
         self.returnPushButton.clicked.connect(self.ReturnClicked)
         self.capturePushButton.clicked.connect(self.capture_image)
         
         self.imageLabel.setScaledContents(True)
-        self.capture = None
-        self.timer = QtCore.QTimer(self, interval=5)
-        self.timer.timeout.connect(self.update_frame)
         self._image_counter = 0
     
-    @QtCore.pyqtSlot()
     def start_webcam(self):
-        print("Initializing Camera")
-        if self.capture is None:
-            self.capture =cv2.VideoCapture(0 + cv2.CAP_DSHOW)
-            self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.timer.start()
+        print("Starting Webcam")
+        self.imageLabel.setText("Loading Camera......")
+        self.capturePushButton.setEnabled(False)
+        self.processPushButton.setEnabled(False)
+        
+        self.grabber = FrameGrabber()
+        self.grabber.cameraLoaded.connect(self.CameraInitialized)
+        self.grabber.signal.connect(self.update_frame)
+        self.grabber.start()
+        
         self.dsGen = DatasetGenerator(self.selectedMethod , self.userName)
         self.dsGen.InitializeDatasetFolder()
         self.usernameLabel.setText(self.userName + " " + str(self._image_counter))
     
+    @QtCore.pyqtSlot(bool)
+    def CameraInitialized(self, isCameraInitialized):
+        if(isCameraInitialized):
+            self.capturePushButton.setEnabled(True)
+            self.processPushButton.setEnabled(True)
+
     def destroy_webcam(self):
-        self.timer.stop()
         print("Destroying Camera")
-        if self.capture != None:
-            self.capture.release()
-            self.capture = None
-    
-    @QtCore.pyqtSlot()
-    def update_frame(self):
-        ret, image=self.capture.read()
-        image = cv2.flip(image, 1)
-        self.displayImage(image, True)
-        
-    @QtCore.pyqtSlot()
-    def capture_image(self):
-        flag, frame= self.capture.read()
-        if flag:
-            QtWidgets.QApplication.beep()
-            name = "{}.png".format(self._image_counter)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            self.statusBar().showMessage('Processing Image')
-            self.dsGen.StoreImage(frame, name)
-            self._image_counter += 1
-            self.usernameLabel.setText(self.userName + " " + str(self._image_counter))
-            self.statusBar().showMessage('Ready')
-    
+        self.grabber.stop()
+
+    @QtCore.pyqtSlot(np.ndarray)
+    def update_frame(self, frame):
+        self.frame = frame
+        self.displayImage(self.frame)
+
     def displayImage(self, img, window=True):
         qformat = QtGui.QImage.Format_Indexed8
         try:
@@ -82,9 +100,19 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
                 self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(outImage))
         except:
             print("Camera Closed")
+
+    @QtCore.pyqtSlot()
+    def capture_image(self):
+        QtWidgets.QApplication.beep()
+        name = "{}.png".format(self._image_counter)
+        self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        self.statusBar().showMessage('Processing Image')
+        self.dsGen.StoreImage(self.frame, name)
+        self._image_counter += 1
+        self.usernameLabel.setText(self.userName + " " + str(self._image_counter))
+        self.statusBar().showMessage('Ready')
         
     def ReturnClicked(self):
-        self._image_counter = 0
         self.destroy_webcam()
         self.clicked.emit()
         
