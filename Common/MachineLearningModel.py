@@ -5,39 +5,50 @@ Created on Fri Nov  5 09:12:29 2021
 @author: quinj
 """
 
-from keras.layers import Dense, Flatten
-from keras.models import Model
-from keras.applications.inception_resnet_v2 import InceptionResNetV2
-from keras.applications.inception_resnet_v2 import preprocess_input
-from keras.preprocessing.image import ImageDataGenerator
-from keras.optimizers import Adam
+from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.models import Model
+from tensorflow.keras.applications.inception_resnet_v2 import InceptionResNetV2
+from tensorflow.keras.applications.inception_resnet_v2 import preprocess_input
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.optimizers import Adam
 from livelossplot.inputs.keras import PlotLossesCallback
-from keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+from Common.DatasetGenerator import DatasetGenerator
 import numpy as np
 from glob import glob
 from pathlib import Path
 from PIL import Image
-from keras.models import load_model
+from tensorflow.keras.models import load_model
+import os
+import cv2
+import sys
+np.set_printoptions(threshold=sys.maxsize)
+
 
 class MachineLearningModel:
     def __init__(self, method):
         print("Machine Learning Model Initialized")
         self.method = method
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     
     def Train(self):
-        BATCH_SIZE = 32
-        IMAGE_SIZE = [299, 299]
         
-        train_path = "../Datasets/{}/Split/train".format(self.method)
-        valid_path = "../Datasets/{}/Split/val".format(self.method)
+        ds = DatasetGenerator(self.method, "")
+        ds.SplitData()
+        
+        BATCH_SIZE = 2
+        IMAGE_SIZE = [320, 240]
+        
+        train_path = "Datasets/{}/Splits/train".format(self.method)
+        valid_path = "Datasets/{}/Splits/val".format(self.method)
         
         num_classes = glob(train_path + "/*")
         
         train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
         val_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
         
-        training_set = train_datagen.flow_from_directory(train_path, target_size = (299, 299), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
-        val_set = val_datagen.flow_from_directory(valid_path, target_size = (299, 299), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
+        training_set = train_datagen.flow_from_directory(train_path, target_size = (320, 240), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
+        val_set = val_datagen.flow_from_directory(valid_path, target_size = (320, 240), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
         
         conv_base = InceptionResNetV2(input_shape=IMAGE_SIZE + [3], weights='imagenet', include_top=False)
 
@@ -52,6 +63,7 @@ class MachineLearningModel:
         # create a model object
         model = Model(inputs=conv_base.input, outputs=prediction)
         
+        
         # tell the model what cost and optimization method to use
         model.compile(
           loss='categorical_crossentropy',
@@ -61,7 +73,7 @@ class MachineLearningModel:
         
         n_steps = training_set.samples // BATCH_SIZE
         n_val_steps = val_set.samples // BATCH_SIZE
-        n_epochs = 50
+        n_epochs = 10
         
         plot_loss_1 = PlotLossesCallback()
         
@@ -73,9 +85,9 @@ class MachineLearningModel:
         
         # EarlyStopping
         early_stop = EarlyStopping(monitor='val_loss',
-                                   patience=10,
-                                   restore_best_weights=True,
-                                   mode='min')
+                                    patience=10,
+                                    restore_best_weights=True,
+                                    mode='min')
         
         history = model.fit(training_set,
                             batch_size=BATCH_SIZE,
@@ -86,16 +98,47 @@ class MachineLearningModel:
                             callbacks=[tl_checkpoint_1, early_stop, plot_loss_1],
                             verbose=1)
         
-    def ValidateImage(self, image):
+    def ValidateImage(self, image, username):
+        self.LoadClasses()
         model = self.LoadModel()
+        if (self.method == "Method1" or self.method == "Method3"):
+            image = np.uint8(image)
+        try:
+            print("Converting to RGB")
+            image = cv2.cvtColor(image,cv2.COLOR_GRAY2RGB)
+        except:
+            print("Image already RGB")
+        print(image.shape)
+        print("Resizing Image to 320 x 240")
+        image = cv2.resize(image, (240, 320))
         im = Image.fromarray(image, 'RGB')
+        print(im)
         #Resizing into 128x128 because we trained the model with this image size.
         img_array = np.array(im)
         #Our keras model used a 4D tensor, (images x height x width x channel)
         #So changing dimension 128x128x3 into 1x128x128x3 
         img_array = np.expand_dims(img_array, axis=0)
-        pred = model.predict(img_array)
-        return pred
+        x = preprocess_input(img_array)
+        pred = model.predict(x)
+        predicted_label_index = np.argmax(pred)
+        print(pred)
+        predicted_class = self.classList[predicted_label_index]
+        print(predicted_class)
+        if(username == predicted_class):
+            return True
+        else:
+            return False
     
     def LoadModel(self):
         return load_model("Model/{}/tl_model_v1.weights.best.hdf5".format(self.method))
+    
+    def LoadClasses(self):
+        BATCH_SIZE = 32
+        train_path = "Datasets/{}/Splits/train".format(self.method)
+        train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
+        training_set = train_datagen.flow_from_directory(train_path, target_size = (320, 240), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
+        classDictionary = training_set.class_indices
+        self.classList = list(classDictionary)
+        
+        
+        
