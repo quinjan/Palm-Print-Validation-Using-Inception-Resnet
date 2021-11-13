@@ -32,13 +32,29 @@ class FrameGrabber(QtCore.QThread):
     
     def stop(self):
         self.cap.release()
+        cv2.destroyAllWindows()
         self.terminate()
                 
-# class Processor(QtCore.QThread):
-#     def __init__(self, parent=None):
-#         super(Processor, self).__init__(parent)
+class Processor(QtCore.QThread):
+    def __init__(self, imageDictionary, selectedMethod, userName, parent=None):
+        super(Processor, self).__init__(parent)
+        self.imageDictionary = imageDictionary
+        self.dsGen = DatasetGenerator(selectedMethod , userName)
+        self.dsGen.InitializeDatasetFolder()
+    
+    signal = QtCore.pyqtSignal()
+    
+    def run(self):
+        for name, image in self.imageDictionary.items():
+            print("Processing image: " + name)
+            self.dsGen.StoreImage(image, name)
+            print("Processing image: " + name + "Done.")
+        self.signal.emit()
         
-
+    def stop(self):
+        self.terminate()
+    
+        
 class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
     
     clicked = QtCore.pyqtSignal()
@@ -48,13 +64,17 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
         self.setupUi(self)
 
         self.grabber = QtCore.QThread()
+        self.imageProcessor = QtCore.QThread()
+        self.imageProcessor.finished.connect(self.ProcessFinished)
         
         self.statusBar().showMessage('Ready')
         self.returnPushButton.clicked.connect(self.ReturnClicked)
         self.capturePushButton.clicked.connect(self.capture_image)
+        self.processPushButton.clicked.connect(self.ProcessImage)
         
         self.imageLabel.setScaledContents(True)
         self._image_counter = 0
+        self.imageToProcess = {}
     
     def start_webcam(self):
         print("Starting Webcam")
@@ -104,17 +124,50 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
     @QtCore.pyqtSlot()
     def capture_image(self):
         QtWidgets.QApplication.beep()
+        
         name = "{}.png".format(self._image_counter)
         self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-        self.statusBar().showMessage('Processing Image')
-        self.dsGen.StoreImage(self.frame, name)
+        self.imageToProcess[name] = self.frame
+        print("Captured: " + self.userName + " " + str(self._image_counter))
+        
         self._image_counter += 1
         self.usernameLabel.setText(self.userName + " " + str(self._image_counter))
-        self.statusBar().showMessage('Ready')
         
+    def ProcessImage(self):
+        if(bool(self.imageToProcess)):
+            self.imageProcessor = Processor(self.imageToProcess, self.selectedMethod, self.userName)
+            self.imageProcessor.signal.connect(self.ProcessFinished)
+            self.capturePushButton.setEnabled(False)
+            self.processPushButton.setEnabled(False)
+            self.statusBar().showMessage('Processing Image')
+            self.imageProcessor.start()
+        else:
+            QtWidgets.QMessageBox.critical(self, "Error!", "No Image To Process.")
+
+    @QtCore.pyqtSlot()
+    def ProcessFinished(self):
+        self.capturePushButton.setEnabled(True)
+        self.processPushButton.setEnabled(True)
+        self.statusBar().showMessage('Ready')
+        QtWidgets.QMessageBox.information(self, "Done!", "Processing Done")
+            
     def ReturnClicked(self):
         self.destroy_webcam()
+        
+        self._image_counter = 0
+        self.imageToProcess = {}
+        self.processTextEdit.clear()
+        
         self.clicked.emit()
+    
+    def normalOutputWritten(self, text):
+        """Append text to the QTextEdit."""
+        # Maybe QTextEdit.append() works as well, but this is how I do it:
+        cursor = self.processTextEdit.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.End)
+        cursor.insertText(text)
+        self.processTextEdit.setTextCursor(cursor)
+        self.processTextEdit.ensureCursorVisible()
         
         
         

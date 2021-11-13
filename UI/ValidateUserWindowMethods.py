@@ -14,6 +14,29 @@ import os
 import cv2
 import numpy as np
 
+class FrameGrabber(QtCore.QThread):
+    def __init__(self, parent=None):
+        super(FrameGrabber, self).__init__(parent)
+
+    signal = QtCore.pyqtSignal(np.ndarray)
+    
+    cameraLoaded = QtCore.pyqtSignal(bool)
+
+    def run(self):
+        self.cap = cv2.VideoCapture(0)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 500)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 500)
+        self.cameraLoaded.emit(True)
+        while self.cap.isOpened():
+            success, frame = self.cap.read()
+            if success:
+                self.signal.emit(frame)
+                
+    def stop(self):
+        self.cap.release()
+        cv2.destroyAllWindows()
+        self.terminate()
+
 class ValidatorWorker(QtCore.QThread):
     
     result = QtCore.pyqtSignal(bool)
@@ -31,7 +54,26 @@ class ValidatorWorker(QtCore.QThread):
     
     def stop(self):
         self.terminate()
-
+        
+class Processor(QtCore.QThread):
+    def __init__(self, image, selectedMethod, userName, parent=None):
+        super(Processor, self).__init__(parent)
+        self.image = image
+        self.userName = userName
+        self.selectedMethod = selectedMethod
+        self.dsGen = DatasetGenerator(selectedMethod , userName)
+        self.dsGen.InitializeDatasetFolder()
+    
+    signal = QtCore.pyqtSignal(np.ndarray)
+    
+    def run(self):
+        print("Processing image: " + self.userName)
+        self.preprocessedImage = self.dsGen.Preprocessing(self.selectedMethod, self.image)
+        print("Processing image: " + self.userName + "Done.")
+        self.signal.emit(self.preprocessedImage)
+        
+    def stop(self):
+        self.terminate()
 
 
 class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
@@ -43,11 +85,10 @@ class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
         self.setupUi(self)
         
         self.validatorWorker = QtCore.QThread()
+        self.grabber = QtCore.QThread()
+        self.imageProcessor = QtCore.QThread()
         
         self.imageLabel.setScaledContents(True)
-        self.capture = None
-        self.timer = QtCore.QTimer(self, interval=5)
-        self.timer.timeout.connect(self.update_frame)
         
         self.returnPushButton.clicked.connect(self.BackButtonClicked)
         self.capturePushButton.clicked.connect(self.capture_image)
@@ -59,11 +100,10 @@ class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
         # test = cv2.imread('Robert.png')
         self.validatorWorker = ValidatorWorker(self.selectedMethod, image, self.userName)
         self.validatorWorker.result.connect(self.onFinished)
-        self.returnPushButton.setEnabled(False)
-        self.capturePushButton.setEnabled(False)
         self.validatorWorker.start()
         
     def ShowValidateUserFinishedDialog(self, result):
+        self.statusBar().showMessage('Ready')
         self.returnPushButton.setEnabled(True)
         self.capturePushButton.setEnabled(True)
         if(result):
@@ -73,13 +113,22 @@ class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
     
     @QtCore.pyqtSlot()
     def capture_image(self):
-        flag, frame= self.capture.read()
-        if flag:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            ds = DatasetGenerator(self.selectedMethod, self.userName)
-            image = ds.Preprocessing(self.selectedMethod, frame)
-            self.ValidateUser(image)
-
+        QtWidgets.QApplication.beep()
+        self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        print("Captured: " + self.userName)
+        
+        self.imageProcessor = Processor(self.frame, self.selectedMethod, self.userName)
+        self.imageProcessor.signal.connect(self.ProcessFinished)
+        self.returnPushButton.setEnabled(False)
+        self.capturePushButton.setEnabled(False)
+        self.statusBar().showMessage('Processing Image')
+        self.imageProcessor.start()
+        
+    @QtCore.pyqtSlot(np.ndarray)
+    def ProcessFinished(self, image):
+        self.statusBar().showMessage('Validating User')
+        self.ValidateUser(image)
+    
     def BackButtonClicked(self):
         self.destroy_webcam()
         self.clicked.emit()
@@ -91,19 +140,27 @@ class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
             
     @QtCore.pyqtSlot()
     def start_webcam(self):
-        print("Initializing Camera")
-        if self.capture is None:
-            self.capture =cv2.VideoCapture(0 + cv2.CAP_DSHOW)
-            self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.timer.start()
+        print("Starting Webcam")
+        self.imageLabel.setText("Loading Camera......")
+        self.capturePushButton.setEnabled(False)
+        
+        self.grabber = FrameGrabber()
+        self.grabber.cameraLoaded.connect(self.CameraInitialized)
+        self.grabber.signal.connect(self.update_frame)
+        self.grabber.start()
+        
+        self.ds = DatasetGenerator(self.selectedMethod, self.userName)
         self.usernameLabel.setText(self.userName)
     
-    @QtCore.pyqtSlot()
-    def update_frame(self):
-        ret, image=self.capture.read()
-        image = cv2.flip(image, 1)
-        self.displayImage(image, True)
+    @QtCore.pyqtSlot(bool)
+    def CameraInitialized(self, isCameraInitialized):
+        if(isCameraInitialized):
+            self.capturePushButton.setEnabled(True)
+    
+    @QtCore.pyqtSlot(np.ndarray)
+    def update_frame(self, frame):
+        self.frame = frame
+        self.displayImage(self.frame)
     
     def displayImage(self, img, window=True):
         qformat = QtGui.QImage.Format_Indexed8
@@ -121,8 +178,5 @@ class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
             print("Camera Closed")
     
     def destroy_webcam(self):
-        self.timer.stop()
         print("Destroying Camera")
-        if self.capture != None:
-            self.capture.release()
-            self.capture = None
+        self.grabber.stop()

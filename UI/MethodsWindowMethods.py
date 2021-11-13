@@ -114,6 +114,9 @@ class MethodsWindow(QtWidgets.QDialog, Ui_MethodsWindow):
                 self.ShowValidateUserWindow()
             
     def ShowCaptureWindow(self):
+        self.oldstdout = sys.stdout
+        sys.stdout = EmittingStream(textWritten=self.captureWindow.normalOutputWritten)
+        
         self.captureWindow.userName = self.userName
         self.hide()
         self.captureWindow.show()
