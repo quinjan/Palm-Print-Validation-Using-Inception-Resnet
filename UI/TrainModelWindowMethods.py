@@ -11,6 +11,8 @@ from Common.MachineLearningModel import MachineLearningModel
 import sys
 
 class TrainerWorker(QtCore.QThread):
+    signal = QtCore.pyqtSignal()
+    
     def __init__(self, selectedMethod, parent=None):
         QtCore.QThread.__init__(self, parent)
         self.selectedMethod = selectedMethod
@@ -18,6 +20,7 @@ class TrainerWorker(QtCore.QThread):
     def run(self):
         self.machineLearning = MachineLearningModel(self.selectedMethod)
         self.machineLearning.Train()
+        self.signal.emit()
     
     def stop(self):
         self.terminate()
@@ -60,6 +63,7 @@ class TrainModelWindow(QtWidgets.QDialog, Ui_TrainModelWindow):
         self.shellOutputTextEdit.clear()
         self.startPushButton.setText("Stop")
         self.trainerWorker = TrainerWorker(self.selectedMethod)
+        self.trainerWorker.signal.connect(self.ShowTrainingFinishedDialog)
         self.backPushButton.setEnabled(False)
         self.trainerWorker.start()
     
@@ -71,7 +75,8 @@ class TrainModelWindow(QtWidgets.QDialog, Ui_TrainModelWindow):
         
     def BackButtonClicked(self):
         self.clicked.emit()
-        
+    
+    @QtCore.pyqtSlot()
     def ShowTrainingFinishedDialog(self):
         self.backPushButton.setEnabled(True)
         self.startPushButton.setText("Start")

@@ -24,8 +24,8 @@ class FrameGrabber(QtCore.QThread):
 
     def run(self):
         self.cap = cv2.VideoCapture(0)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 500)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 500)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 500)
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 500)
         self.cameraLoaded.emit(True)
         while self.cap.isOpened():
             success, frame = self.cap.read()

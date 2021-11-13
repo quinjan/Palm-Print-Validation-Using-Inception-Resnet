@@ -36,8 +36,8 @@ class MachineLearningModel:
         ds = DatasetGenerator(self.method, "")
         ds.SplitData()
         
-        BATCH_SIZE = 1
-        IMAGE_SIZE = [299, 299]
+        BATCH_SIZE = 2
+        IMAGE_SIZE = [320, 240]
         
         train_path = "Datasets/{}/Splits/train".format(self.method)
         valid_path = "Datasets/{}/Splits/val".format(self.method)
@@ -47,8 +47,8 @@ class MachineLearningModel:
         train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
         val_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
         
-        training_set = train_datagen.flow_from_directory(train_path, target_size = (299, 299), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
-        val_set = val_datagen.flow_from_directory(valid_path, target_size = (299, 299), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
+        training_set = train_datagen.flow_from_directory(train_path, target_size = (320, 240), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
+        val_set = val_datagen.flow_from_directory(valid_path, target_size = (320, 240), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
         
         conv_base = InceptionResNetV2(input_shape=IMAGE_SIZE + [3], weights='imagenet', include_top=False)
 
@@ -73,7 +73,7 @@ class MachineLearningModel:
         
         n_steps = training_set.samples // BATCH_SIZE
         n_val_steps = val_set.samples // BATCH_SIZE
-        n_epochs = 50
+        n_epochs = 10
         
         plot_loss_1 = PlotLossesCallback()
         
@@ -101,10 +101,16 @@ class MachineLearningModel:
     def ValidateImage(self, image, username):
         self.LoadClasses()
         model = self.LoadModel()
-        image = np.uint8(image)
-        image = cv2.cvtColor(image,cv2.COLOR_GRAY2RGB)
+        if (self.method == "Method1" or self.method == "Method3"):
+            image = np.uint8(image)
+        try:
+            print("Converting to RGB")
+            image = cv2.cvtColor(image,cv2.COLOR_GRAY2RGB)
+        except:
+            print("Image already RGB")
         print(image.shape)
-        image = cv2.resize(image, (299, 299))
+        print("Resizing Image to 320 x 240")
+        image = cv2.resize(image, (240, 320))
         im = Image.fromarray(image, 'RGB')
         print(im)
         #Resizing into 128x128 because we trained the model with this image size.
@@ -130,7 +136,7 @@ class MachineLearningModel:
         BATCH_SIZE = 32
         train_path = "Datasets/{}/Splits/train".format(self.method)
         train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
-        training_set = train_datagen.flow_from_directory(train_path, target_size = (299, 299), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
+        training_set = train_datagen.flow_from_directory(train_path, target_size = (320, 240), batch_size = BATCH_SIZE, class_mode = 'categorical', seed=42)
         classDictionary = training_set.class_indices
         self.classList = list(classDictionary)
         

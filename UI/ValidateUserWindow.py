@@ -41,6 +41,7 @@ class Ui_ValidateUserWindow(object):
         sizePolicy.setHeightForWidth(self.imageLabel.sizePolicy().hasHeightForWidth())
         self.imageLabel.setSizePolicy(sizePolicy)
         self.imageLabel.setMinimumSize(QtCore.QSize(500, 500))
+        self.imageLabel.setMaximumSize(QtCore.QSize(500, 500))
         self.imageLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.imageLabel.setObjectName("imageLabel")
         self.verticalLayout.addWidget(self.imageLabel)

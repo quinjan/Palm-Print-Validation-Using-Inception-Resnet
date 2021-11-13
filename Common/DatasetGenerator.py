@@ -10,6 +10,7 @@ from pathlib import Path
 import cv2
 import splitfolders
 import shutil
+import os
 
 class DatasetGenerator(BaseClass):
     def __init__(self, method, username):
@@ -31,8 +32,8 @@ class DatasetGenerator(BaseClass):
         print("Storing Pre Processed Image {} in".format(filename) + self.userSourcePath)
         cv2.imwrite(self.userSourcePath + "/{}".format(filename), preProcessed_Image)
     
-    
     def SplitData(self):
+        self.RemoveBlankDirectories()
         print("Removing Existing Split Directory")
         shutil.rmtree(self.splitPath)
         print("Splitting Dataset")
@@ -40,4 +41,14 @@ class DatasetGenerator(BaseClass):
         
     def DeleteCurrentUserDataset(self):
         print("Removing {} from Source Directory".format(self.username))
-        shutil.rmtree(self.userSourcePath)
+
+        for file in os.scandir(self.userSourcePath):
+            if file.name.endswith(".png"):
+                os.unlink(file.path)
+    
+    def RemoveBlankDirectories(self):
+        print("Removing Blank Directories in Sources")
+        walk = list(os.walk(self.sourcePath))
+        for path, _, _ in walk[::-1]:
+            if len(os.listdir(path)) == 0:
+                shutil.rmtree(path)

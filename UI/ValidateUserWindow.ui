@@ -61,6 +61,12 @@
          <height>500</height>
         </size>
        </property>
+       <property name="maximumSize">
+        <size>
+         <width>500</width>
+         <height>500</height>
+        </size>
+       </property>
        <property name="text">
         <string>Image</string>
        </property>
