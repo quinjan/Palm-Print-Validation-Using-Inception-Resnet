@@ -1,0 +1,113 @@
+{
+ "version": "auto-py-to-exe-configuration_v1",
+ "pyinstallerOptions": [
+  {
+   "optionDest": "noconfirm",
+   "value": true
+  },
+  {
+   "optionDest": "filenames",
+   "value": "D:/MAPUA/2021-2022/COE/Thesis Testing/Main Program/Palm-Print-Validation-Using-Inception-Resnet/main.py"
+  },
+  {
+   "optionDest": "onefile",
+   "value": true
+  },
+  {
+   "optionDest": "console",
+   "value": false
+  },
+  {
+   "optionDest": "ascii",
+   "value": false
+  },
+  {
+   "optionDest": "clean_build",
+   "value": false
+  },
+  {
+   "optionDest": "strip",
+   "value": false
+  },
+  {
+   "optionDest": "noupx",
+   "value": false
+  },
+  {
+   "optionDest": "uac_admin",
+   "value": false
+  },
+  {
+   "optionDest": "uac_uiaccess",
+   "value": false
+  },
+  {
+   "optionDest": "win_private_assemblies",
+   "value": false
+  },
+  {
+   "optionDest": "win_no_prefer_redirects",
+   "value": false
+  },
+  {
+   "optionDest": "bootloader_ignore_signals",
+   "value": false
+  },
+  {
+   "optionDest": "disable_windowed_traceback",
+   "value": false
+  },
+  {
+   "optionDest": "embed_manifest",
+   "value": false
+  },
+  {
+   "optionDest": "datas",
+   "value": "D:/MAPUA/2021-2022/COE/Thesis Testing/Main Program/Palm-Print-Validation-Using-Inception-Resnet/UI;UI/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "D:/MAPUA/2021-2022/COE/Thesis Testing/Main Program/Palm-Print-Validation-Using-Inception-Resnet/Common;Common/"
+  },
+  {
+   "optionDest": "pathex",
+   "value": "C:/ProgramData/Anaconda3/envs/testPy/Lib/site-packages/cv2"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "matplotlib"
+  },
+  {
+   "optionDest": "pathex",
+   "value": "C:/ProgramData/Anaconda3/envs/testPy/Lib/site-packages"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "im2dhisteq"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "splitfolders"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "tensorflow"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "livelossplot"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "numpy"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "PIL"
+  }
+ ],
+ "nonPyinstallerOptions": {
+  "increaseRecursionLimit": true,
+  "manualArguments": ""
+ }
+}
