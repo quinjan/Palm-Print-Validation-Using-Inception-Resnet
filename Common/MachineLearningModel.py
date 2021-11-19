@@ -16,7 +16,6 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from Common.DatasetGenerator import DatasetGenerator
 import numpy as np
 from glob import glob
-from pathlib import Path
 from PIL import Image
 from tensorflow.keras.models import load_model
 import os
@@ -75,10 +74,11 @@ class MachineLearningModel:
         n_val_steps = val_set.samples // BATCH_SIZE
         n_epochs = 10
         
-        plot_loss_1 = PlotLossesCallback()
-        
+        # Run in spyder and add in model.fit callbacks to generate graph
+        # lossesCallback = PlotLossesCallback()
+
         # ModelCheckpoint callback - save best weights
-        Path("Model/{}".format(self.method)).mkdir(parents=True, exist_ok=True)
+        os.makedirs("Model/{}".format(self.method), exist_ok=True) 
         tl_checkpoint_1 = ModelCheckpoint(filepath="Model/{}/tl_model_v1.weights.best.hdf5".format(self.method),
                                           save_best_only=True,
                                           verbose=1)
@@ -95,7 +95,7 @@ class MachineLearningModel:
                             validation_data=val_set,
                             steps_per_epoch=n_steps,
                             validation_steps=n_val_steps,
-                            callbacks=[tl_checkpoint_1, early_stop, plot_loss_1],
+                            callbacks=[tl_checkpoint_1, early_stop],
                             verbose=1)
         
     def ValidateImage(self, image, username):

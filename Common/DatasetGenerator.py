@@ -6,7 +6,6 @@ Created on Fri Nov  5 08:31:42 2021
 """
 
 from Common.BaseClass import BaseClass
-from pathlib import Path
 import cv2
 import splitfolders
 import shutil
@@ -23,9 +22,9 @@ class DatasetGenerator(BaseClass):
     
     def InitializeDatasetFolder(self):
         print("Initializing Dataset Folder")
-        Path(self.sourcePath).mkdir(parents=True, exist_ok=True)
-        Path(self.userSourcePath).mkdir(parents=True, exist_ok=True)
-        Path(self.splitPath).mkdir(parents=True, exist_ok=True)
+        os.makedirs(self.sourcePath, exist_ok=True)
+        os.makedirs(self.userSourcePath, exist_ok=True)
+        os.makedirs(self.splitPath, exist_ok=True)
     
     def StoreImage(self, image, filename):
         preProcessed_Image = self.Preprocessing(self.method, image)
