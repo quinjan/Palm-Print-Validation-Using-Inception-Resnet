@@ -64,7 +64,7 @@ class MethodsWindow(QtWidgets.QDialog, Ui_MethodsWindow):
     def Method1Clicked(self):
         if (self.selectedAction == "GenerateDataset"):
             result = self.ShowUserNameDialog()
-            if(result):
+            if(result and self.userName != ""):
                 self.captureWindow.selectedMethod = DatasetGenerator.Methods.Method1._name_
                 self.ShowCaptureWindow()
         elif (self.selectedAction == "TrainModel"):
@@ -73,7 +73,7 @@ class MethodsWindow(QtWidgets.QDialog, Ui_MethodsWindow):
             self.ShowTrainModelWindow()
         elif (self.selectedAction == "ValidateUser"):
             result = self.ShowUserNameDialog()
-            if(result):
+            if(result and self.userName != ""):
                 self.validateUserWindow.selectedMethod = DatasetGenerator.Methods.Method1._name_
                 self.validateUserWindow.methodDescriptionLabel.setText(self.method1PushButton.text())
                 self.ShowValidateUserWindow()
@@ -81,7 +81,7 @@ class MethodsWindow(QtWidgets.QDialog, Ui_MethodsWindow):
     def Method2Clicked(self):
         if (self.selectedAction == "GenerateDataset"):
             result = self.ShowUserNameDialog()
-            if(result):
+            if(result and self.userName != ""):
                 self.captureWindow.selectedMethod = DatasetGenerator.Methods.Method2._name_
                 self.ShowCaptureWindow()
         elif (self.selectedAction == "TrainModel"):
@@ -90,7 +90,7 @@ class MethodsWindow(QtWidgets.QDialog, Ui_MethodsWindow):
             self.ShowTrainModelWindow()
         elif (self.selectedAction == "ValidateUser"):
             result = self.ShowUserNameDialog()
-            if(result):
+            if(result and self.userName != ""):
                 self.validateUserWindow.selectedMethod = DatasetGenerator.Methods.Method2._name_
                 self.validateUserWindow.methodDescriptionLabel.setText(self.method2PushButton.text())
                 self.ShowValidateUserWindow()
@@ -99,7 +99,7 @@ class MethodsWindow(QtWidgets.QDialog, Ui_MethodsWindow):
     def Method3Clicked(self):
         if (self.selectedAction == "GenerateDataset"):
             result = self.ShowUserNameDialog()
-            if(result):
+            if(result and self.userName != ""):
                 self.captureWindow.selectedMethod = DatasetGenerator.Methods.Method3._name_
                 self.ShowCaptureWindow()
         elif (self.selectedAction == "TrainModel"):
@@ -108,7 +108,7 @@ class MethodsWindow(QtWidgets.QDialog, Ui_MethodsWindow):
             self.ShowTrainModelWindow()
         elif (self.selectedAction == "ValidateUser"):
             result = self.ShowUserNameDialog()
-            if(result):
+            if(result and self.userName != ""):
                 self.validateUserWindow.selectedMethod = DatasetGenerator.Methods.Method3._name_
                 self.validateUserWindow.methodDescriptionLabel.setText(self.method3PushButton.text())
                 self.ShowValidateUserWindow()

@@ -101,8 +101,7 @@ class MachineLearningModel:
     def ValidateImage(self, image, username):
         self.LoadClasses()
         model = self.LoadModel()
-        if (self.method == "Method1" or self.method == "Method3"):
-            image = np.uint8(image)
+        image = np.uint8(image)
         try:
             print("Converting to RGB")
             image = cv2.cvtColor(image,cv2.COLOR_GRAY2RGB)
