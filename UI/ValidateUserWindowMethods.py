@@ -23,19 +23,24 @@ class FrameGrabber(QtCore.QThread):
     cameraLoaded = QtCore.pyqtSignal(bool)
 
     def run(self):
+        #Uncomment for RPI
+        #os.system('sudo modprobe bcm2835-v4l2')
+
+        self.ThreadActive = True
         self.cap = cv2.VideoCapture(0)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 500)
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 500)
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
         self.cameraLoaded.emit(True)
-        while self.cap.isOpened():
+        
+        while self.ThreadActive:
             success, frame = self.cap.read()
             if success:
                 self.signal.emit(frame)
-                
-    def stop(self):
         self.cap.release()
-        cv2.destroyAllWindows()
-        self.terminate()
+        self.quit()
+    
+    def stop(self):
+        self.ThreadActive = False
 
 class ValidatorWorker(QtCore.QThread):
     
