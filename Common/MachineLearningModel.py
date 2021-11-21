@@ -11,7 +11,8 @@ from tensorflow.keras.applications.inception_resnet_v2 import InceptionResNetV2
 from tensorflow.keras.applications.inception_resnet_v2 import preprocess_input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.optimizers import Adam
-from livelossplot.inputs.keras import PlotLossesCallback
+# import if need to check graphs *Use spyder IDE
+# from livelossplot.inputs.keras import PlotLossesCallback
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from Common.DatasetGenerator import DatasetGenerator
 import numpy as np
