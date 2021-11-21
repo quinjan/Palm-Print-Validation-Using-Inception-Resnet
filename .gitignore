@@ -1,3 +1,5 @@
 Datasets/
 Model/
 output/
+*.pyc
+*.pyo
