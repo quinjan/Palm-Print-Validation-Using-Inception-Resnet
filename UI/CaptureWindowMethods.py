@@ -11,6 +11,7 @@ import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 from UI.CaptureWindow import Ui_CaptureWindow
 from Common.DatasetGenerator import DatasetGenerator
+import time
 
 class FrameGrabber(QtCore.QThread):
     def __init__(self, parent=None):
@@ -24,14 +25,19 @@ class FrameGrabber(QtCore.QThread):
         #Uncomment for RPI
         #os.system('sudo modprobe bcm2835-v4l2')
 
-        self.ThreadActive = True
-        self.cap = cv2.VideoCapture(0)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
-        self.cameraLoaded.emit(True)
+        self.cap = cv2.VideoCapture("http://raspberrypi:5000/video_feed")
+        time.sleep(5)
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
+        
+        if(self.cap.isOpened()):
+            self.ThreadActive = True
+            self.cameraLoaded.emit(True)
+        
+        else:
+            self.ThreadActive = False
         
         while self.ThreadActive:
-            print(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             success, frame = self.cap.read()
             if success:
                 self.signal.emit(frame)

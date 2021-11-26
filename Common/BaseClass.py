@@ -20,7 +20,7 @@ class BaseClass:
         Method3 = 3
 
     def Extract_ROI(self, image):
-        print("Extract ROI")
+        print("Extracting ROI")
         roi = ROI()
         extracted = roi.Process(image)
         return extracted
