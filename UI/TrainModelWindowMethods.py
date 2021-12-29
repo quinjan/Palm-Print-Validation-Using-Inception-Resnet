@@ -13,14 +13,19 @@ import sys
 class TrainerWorker(QtCore.QThread):
     signal = QtCore.pyqtSignal()
     
+    exception = QtCore.pyqtSignal(Exception)
+    
     def __init__(self, selectedMethod, parent=None):
         QtCore.QThread.__init__(self, parent)
         self.selectedMethod = selectedMethod
     
     def run(self):
-        self.machineLearning = MachineLearningModel(self.selectedMethod)
-        self.machineLearning.Train()
-        self.signal.emit()
+        try:
+            self.machineLearning = MachineLearningModel(self.selectedMethod)
+            self.machineLearning.Train()
+            self.signal.emit()
+        except Exception as e:
+            self.exception.emit(e)
     
     def stop(self):
         self.terminate()
@@ -64,6 +69,7 @@ class TrainModelWindow(QtWidgets.QDialog, Ui_TrainModelWindow):
         self.startPushButton.setText("Stop")
         self.trainerWorker = TrainerWorker(self.selectedMethod)
         self.trainerWorker.signal.connect(self.ShowTrainingFinishedDialog)
+        self.trainerWorker.exception.connect(self.ExceptionError)
         self.backPushButton.setEnabled(False)
         self.trainerWorker.start()
     
@@ -81,5 +87,12 @@ class TrainModelWindow(QtWidgets.QDialog, Ui_TrainModelWindow):
         self.backPushButton.setEnabled(True)
         self.startPushButton.setText("Start")
         QtWidgets.QMessageBox.information(self, "Done!", "Training Done")
+    
+    @QtCore.pyqtSlot(Exception)
+    def ExceptionError(self, text):
+        self.startPushButton.setText("Start")
+        self.backPushButton.setEnabled(True)
+        self.normalOutputWritten("Training Stopped!")
+        QtWidgets.QMessageBox.critical(self, "Error!", str(text))
         
         

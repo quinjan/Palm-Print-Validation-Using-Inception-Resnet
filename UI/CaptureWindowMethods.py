@@ -11,6 +11,7 @@ import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 from UI.CaptureWindow import Ui_CaptureWindow
 from Common.DatasetGenerator import DatasetGenerator
+from Common.Helpers.RemoteHelper import RemoteHelper
 import time
 
 class FrameGrabber(QtCore.QThread):
@@ -20,32 +21,44 @@ class FrameGrabber(QtCore.QThread):
     signal = QtCore.pyqtSignal(np.ndarray)
     
     cameraLoaded = QtCore.pyqtSignal(bool)
+    exception = QtCore.pyqtSignal(Exception)
 
     def run(self):
         #Uncomment for RPI
         #os.system('sudo modprobe bcm2835-v4l2')
-
-        self.cap = cv2.VideoCapture("http://raspberrypi:5000/video_feed")
-        time.sleep(5)
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
+        try:
+            self.remote = RemoteHelper()
+            
+            self.cap = cv2.VideoCapture(self.remote.videoFeed)
+            time.sleep(5)
+            # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
+            # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
+            
+            self.remote.InitializeGPIOPins()
+            
+            if(self.cap.isOpened()):
+                self.ThreadActive = True
+                self.cameraLoaded.emit(True)
+            
+            else:
+                self.ThreadActive = False
+            
+            while self.ThreadActive:
+                self.remote.RunFlash()
+                success, frame = self.cap.read()
+                if success:
+                    self.signal.emit(frame)
+            self.cap.release()
+            self.quit()
+        except Exception as e:
+            self.exception.emit(e)
         
-        if(self.cap.isOpened()):
-            self.ThreadActive = True
-            self.cameraLoaded.emit(True)
-        
-        else:
-            self.ThreadActive = False
-        
-        while self.ThreadActive:
-            success, frame = self.cap.read()
-            if success:
-                self.signal.emit(frame)
-        self.cap.release()
-        self.quit()
-    
     def stop(self):
         self.ThreadActive = False
+        try:
+            self.remote.StopFlash()
+        except:
+            print("Camera Failed To Initialize")
                 
 class Processor(QtCore.QThread):
     def __init__(self, imageDictionary, selectedMethod, userName, parent=None):
@@ -57,12 +70,18 @@ class Processor(QtCore.QThread):
     
     signal = QtCore.pyqtSignal()
     
+    exception = QtCore.pyqtSignal(Exception)
+    
     def run(self):
-        for name, image in self.imageDictionary.items():
-            print("Processing image: " + name)
-            self.dsGen.StoreImage(image, name)
-            print("Processing image: " + name + "Done.")
-        self.signal.emit()
+        try:
+            for name, image in self.imageDictionary.items():
+                print("Processing image: " + name)
+                self.dsGen.StoreImage(image, name)
+                print("Processing image: " + name + "Done.")
+            self.signal.emit()
+        except Exception as e:
+            self.exception.emit(e)
+
         
     def stop(self):
         self.terminate()
@@ -97,6 +116,7 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
         
         self.grabber = FrameGrabber()
         self.grabber.cameraLoaded.connect(self.CameraInitialized)
+        self.grabber.exception.connect(self.ExceptionError)
         self.grabber.signal.connect(self.update_frame)
         self.grabber.start()
         
@@ -150,6 +170,7 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
         if(bool(self.imageToProcess)):
             self.imageProcessor = Processor(self.imageToProcess, self.selectedMethod, self.userName)
             self.imageProcessor.signal.connect(self.ProcessFinished)
+            self.imageProcessor.exception.connect(self.ExceptionError)
             self.capturePushButton.setEnabled(False)
             self.processPushButton.setEnabled(False)
             self.statusBar().showMessage('Processing Image')
@@ -181,6 +202,13 @@ class CaptureWindow(QtWidgets.QMainWindow, Ui_CaptureWindow):
         cursor.insertText(text)
         self.processTextEdit.setTextCursor(cursor)
         self.processTextEdit.ensureCursorVisible()
+    
+    @QtCore.pyqtSlot(Exception)
+    def ExceptionError(self, text):
+        self.capturePushButton.setEnabled(True)
+        self.processPushButton.setEnabled(True)
+        self.statusBar().showMessage('Ready')
+        QtWidgets.QMessageBox.critical(self, "Error!", str(text))
         
         
         

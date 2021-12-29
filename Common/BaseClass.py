@@ -28,11 +28,14 @@ class BaseClass:
     def Preprocessing(self, method, image):
         print("Pre Processing Method")
         if (method == self.Methods.Method1._name_):
-            result = self.Method1(image)
+            roi = self.Extract_ROI(image)
+            result = self.Method1(roi)
         elif (method == self.Methods.Method2._name_):
-            result = self.Method2(image)
+            roi = self.Extract_ROI(image)
+            result = self.Method2(roi)
         elif (method == self.Methods.Method3._name_):
-            result = self.Method3(image)
+            roi = self.Extract_ROI(image)
+            result = self.Method3(roi)
         else:
             raise ValueError("Invalid Method")
         
