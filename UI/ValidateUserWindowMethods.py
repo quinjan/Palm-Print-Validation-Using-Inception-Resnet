@@ -8,6 +8,7 @@ Created on Mon Nov  8 22:29:35 2021
 from PyQt5 import QtCore, QtGui, QtWidgets
 from UI.ValidateUserWindow import Ui_ValidateUserWindow
 from Common.MachineLearningModel import MachineLearningModel
+from Common.Helpers.RemoteHelper import RemoteHelper
 from Common.DatasetGenerator import DatasetGenerator
 import sys
 import os
@@ -22,35 +23,51 @@ class FrameGrabber(QtCore.QThread):
     signal = QtCore.pyqtSignal(np.ndarray)
     
     cameraLoaded = QtCore.pyqtSignal(bool)
+    
+    exception = QtCore.pyqtSignal(Exception)
 
     def run(self):
         #Uncomment for RPI
         #os.system('sudo modprobe bcm2835-v4l2')
-
-        self.cap = cv2.VideoCapture("http://raspberrypi:5000/video_feed")
-        time.sleep(5)
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
-        if(self.cap.isOpened()):
-            self.ThreadActive = True
-            self.cameraLoaded.emit(True)
+        try:
+            self.remote = RemoteHelper()
+            
+            self.cap = cv2.VideoCapture(self.remote.videoFeed)
+            time.sleep(5)
+            # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
+            # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
+            
+            self.remote.InitializeGPIOPins()
+            
+            if(self.cap.isOpened()):
+                self.ThreadActive = True
+                self.cameraLoaded.emit(True)
+            
+            else:
+                self.ThreadActive = False
+            
+            while self.ThreadActive:
+                self.remote.RunFlash()
+                success, frame = self.cap.read()
+                if success:
+                    self.signal.emit(frame)
+            self.cap.release()
+            self.quit()
+        except Exception as e:
+            self.exception.emit(e)
         
-        else:
-            self.ThreadActive = False
-        
-        while self.ThreadActive:
-            success, frame = self.cap.read()
-            if success:
-                self.signal.emit(frame)
-        self.cap.release()
-        self.quit()
-    
     def stop(self):
         self.ThreadActive = False
+        try:
+            self.remote.StopFlash()
+        except:
+            print("Camera Failed To Initialize")
 
 class ValidatorWorker(QtCore.QThread):
     
     result = QtCore.pyqtSignal(bool)
+    
+    exception = QtCore.pyqtSignal(Exception)
     
     def __init__(self, selectedMethod, image, userName, parent=None):
         QtCore.QThread.__init__(self, parent)
@@ -59,10 +76,13 @@ class ValidatorWorker(QtCore.QThread):
         self.userName = userName
     
     def run(self):
-        self.machineLearning = MachineLearningModel(self.selectedMethod)
-        response = self.machineLearning.ValidateImage(self.image, self.userName)
-        self.result.emit(response)
-    
+        try:
+            self.machineLearning = MachineLearningModel(self.selectedMethod)
+            response = self.machineLearning.ValidateImage(self.image, self.userName)
+            self.result.emit(response)
+        except Exception as e:
+            self.exception.emit(e)
+        
     def stop(self):
         self.terminate()
         
@@ -77,12 +97,16 @@ class Processor(QtCore.QThread):
     
     signal = QtCore.pyqtSignal(np.ndarray)
     
+    exception = QtCore.pyqtSignal(Exception)
+    
     def run(self):
-        print("Processing image: " + self.userName)
-        self.preprocessedImage = self.dsGen.Preprocessing(self.selectedMethod, self.image)
-        print("Processing image: " + self.userName + "Done.")
-        self.signal.emit(self.preprocessedImage)
-        
+         try:
+            print("Processing image: " + self.userName)
+            self.preprocessedImage = self.dsGen.Preprocessing(self.selectedMethod, self.image)
+            print("Processing image: " + self.userName + "Done.")
+            self.signal.emit(self.preprocessedImage)
+         except Exception as e:
+             self.exception.emit(e)
     def stop(self):
         self.terminate()
 
@@ -111,6 +135,7 @@ class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
         # test = cv2.imread('Robert.png')
         self.validatorWorker = ValidatorWorker(self.selectedMethod, image, self.userName)
         self.validatorWorker.result.connect(self.onFinished)
+        self.validatorWorker.exception.connect(self.ExceptionError)
         self.validatorWorker.start()
         
     def ShowValidateUserFinishedDialog(self, result):
@@ -130,6 +155,7 @@ class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
         
         self.imageProcessor = Processor(self.frame, self.selectedMethod, self.userName)
         self.imageProcessor.signal.connect(self.ProcessFinished)
+        self.imageProcessor.exception.connect(self.ExceptionError)
         self.returnPushButton.setEnabled(False)
         self.capturePushButton.setEnabled(False)
         self.statusBar().showMessage('Processing Image')
@@ -157,6 +183,7 @@ class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
         
         self.grabber = FrameGrabber()
         self.grabber.cameraLoaded.connect(self.CameraInitialized)
+        self.grabber.exception.connect(self.ExceptionError)
         self.grabber.signal.connect(self.update_frame)
         self.grabber.start()
         
@@ -191,3 +218,10 @@ class ValidateUserWindow(QtWidgets.QMainWindow, Ui_ValidateUserWindow):
     def destroy_webcam(self):
         print("Destroying Camera")
         self.grabber.stop()
+
+    @QtCore.pyqtSlot(Exception)
+    def ExceptionError(self, text):
+        self.statusBar().showMessage('Ready')
+        self.returnPushButton.setEnabled(True)
+        self.capturePushButton.setEnabled(True)
+        QtWidgets.QMessageBox.critical(self, "Error!", str(text))
