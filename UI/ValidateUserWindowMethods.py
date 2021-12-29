@@ -101,11 +101,10 @@ class Processor(QtCore.QThread):
     
     def run(self):
          try:
-             for name, image in self.imageDictionary.items():
-                 print("Processing image: " + name)
-                 self.dsGen.StoreImage(image, name)
-                 print("Processing image: " + name + "Done.")
-             self.signal.emit()
+            print("Processing image: " + self.userName)
+            self.preprocessedImage = self.dsGen.Preprocessing(self.selectedMethod, self.image)
+            print("Processing image: " + self.userName + "Done.")
+            self.signal.emit(self.preprocessedImage)
          except Exception as e:
              self.exception.emit(e)
     def stop(self):
